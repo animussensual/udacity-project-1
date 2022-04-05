@@ -79,7 +79,7 @@ class Blockchain {
             if (errors.length > 0) {
                 self.chain.pop();
                 self.height = self.height - 1;
-                reject(`Chain validation failed with errors ${errors}`);
+                reject(`Chain validation failed with errors: ${errors}`);
             } else {
                 resolve(block);
             }
@@ -144,8 +144,11 @@ class Blockchain {
 
             let block = new BlockClass.Block({owner: address, star: star});
 
-            await self._addBlock(block);
-
+            try {
+                await self._addBlock(block);
+            } catch (error) {
+                reject(`Adding block failed: ${error}`)
+            }
             resolve(block);
         });
     }
@@ -159,12 +162,7 @@ class Blockchain {
     getBlockByHash(hash) {
         let self = this;
         return new Promise((resolve, reject) => {
-            let matchedHash = self.chain.filter(p => p.hash === hash);
-            if (matchedHash.length === 0) {
-                resolve(null);
-            } else {
-                resolve(matchedHash);
-            }
+            resolve(self.chain.find(p => p.hash === hash));
         });
     }
 
@@ -176,12 +174,10 @@ class Blockchain {
     getBlockByHeight(height) {
         let self = this;
         return new Promise((resolve, reject) => {
-            let atHeight = self.chain.filter(p => p.height === height);
-            if (atHeight.length > 0) {
-                resolve(atHeight[0]);
-            } else {
+            if (self.height < height) {
                 resolve(null);
             }
+            resolve(self.chain.find(p => p.height === height));
         });
     }
 
@@ -230,13 +226,13 @@ class Blockchain {
                 if (i > 0) {
                     let expectedPrevBlockHash = self.chain[i - 1].hash;
                     if (expectedPrevBlockHash !== block.previousBlockHash) {
-                        errorLog.push(`Block ${block} previousBlockHash is invalid `);
+                        errorLog.push(`Block ${i} previousBlockHash is invalid `);
                     }
                 }
 
                 block.validate().then(valid => {
                     if (!valid) {
-                        errorLog.push(`Block ${block} is invalid`);
+                        errorLog.push(`Block ${i} is invalid`);
                     }
                 });
             });
